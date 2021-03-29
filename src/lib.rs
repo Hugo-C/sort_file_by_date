@@ -1,4 +1,4 @@
-use std::{fs, io};
+use std::{fs, io, thread};
 use std::path::PathBuf;
 use std::collections::BTreeMap;
 
@@ -9,6 +9,8 @@ pub fn sort_year(base_path: &str, year: &str) -> Result<(), io::Error> {
     let composed_path = [base_path, year];
     let year_dir: PathBuf = composed_path.iter().collect();
 
+    let mut handles = Vec::new();  // used to wait for all threads to finish
+
     for entry in fs::read_dir(year_dir)? {
         let entry = entry?;
         let month_path = entry.path();
@@ -17,18 +19,28 @@ pub fn sort_year(base_path: &str, year: &str) -> Result<(), io::Error> {
         match month_path.file_name() {
             Some(s) => month_filename = s,
             None => panic!("No filename for the given month!")
-        } ;
+        };
         println!(
             "Sorting: {}-{}",
             month_filename.to_str().unwrap(),
             year,
         );
-        sort_month(month_path)?;
+        let handle = thread::spawn(move|| {
+            let res = sort_month(&month_path);
+            if let Err(e) = res {
+                panic!("month {:?} wasn't processed correctly: {:?}", month_path, e)
+            }
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
     }
     Ok(())
 }
 
-fn sort_month(month_path: PathBuf) -> Result<(), io::Error> {
+fn sort_month(month_path: &PathBuf) -> Result<(), io::Error> {
     let mut files_sorted_by_ts = BTreeMap::new();
 
     // Retrieve all the files
