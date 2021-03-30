@@ -1,5 +1,5 @@
 use std::{fs, io, thread};
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::collections::BTreeMap;
 
 const EXTENSION_TO_SORT: &str = ".json";
@@ -40,7 +40,7 @@ pub fn sort_year(base_path: &str, year: &str) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn sort_month(month_path: &PathBuf) -> Result<(), io::Error> {
+fn sort_month(month_path: &Path) -> Result<(), io::Error> {
     let mut files_sorted_by_ts = BTreeMap::new();
 
     // Retrieve all the files
@@ -59,9 +59,9 @@ fn sort_month(month_path: &PathBuf) -> Result<(), io::Error> {
         }
     }
 
-    // Rewrite the filename according to the timestamp
+    // Rewrite the filename according to the timestamp (BTreeMaps are sorted by keys)
     let mut i: u64 = 0;
-    for (_timestamp, files) in &files_sorted_by_ts {
+    for files in files_sorted_by_ts.values() {
         // Iterate over all the file of a given timestamp (in no particular order)
         for file_path in files {
             let new_file_name = format!("{}{}", i, EXTENSION_TO_SORT);
@@ -74,12 +74,12 @@ fn sort_month(month_path: &PathBuf) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn file_path_to_timestamp(file_path: &PathBuf) -> u64 {
+fn file_path_to_timestamp(file_path: &Path) -> u64 {
     let filename = file_path.file_name().unwrap();
     let str_filename = filename.to_str().unwrap();
     assert!(str_filename.ends_with(EXTENSION_TO_SORT));
     let mut ts = str_filename.trim_end_matches(EXTENSION_TO_SORT);
-    ts = ts.split("_").last().unwrap();
+    ts = ts.split('_').last().unwrap();
     ts.parse().unwrap()
 }
 
