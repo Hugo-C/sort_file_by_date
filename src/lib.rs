@@ -25,7 +25,7 @@ pub fn sort_year(base_path: &str, year: &str) -> Result<(), io::Error> {
             month_filename.to_str().unwrap(),
             year,
         );
-        let handle = thread::spawn(move|| {
+        let handle = thread::spawn(move || {
             let res = sort_month(&month_path);
             if let Err(e) = res {
                 panic!("month {:?} wasn't processed correctly: {:?}", month_path, e)
@@ -47,18 +47,29 @@ fn sort_month(month_path: &PathBuf) -> Result<(), io::Error> {
     for entry in fs::read_dir(month_path)? {
         let entry = entry?;
         let file_path = entry.path();
-        let ts = file_path_to_timestamp(&file_path);
-        files_sorted_by_ts.insert(ts, file_path);
+        let timestamp = file_path_to_timestamp(&file_path);
+        match files_sorted_by_ts.get_mut(&timestamp) {
+            None => {
+                // No file exist for this timestamp, create a list of files for this given timestamp
+                files_sorted_by_ts.insert(timestamp, vec![file_path]);
+            }
+            Some(existing_files) => {
+                existing_files.push(file_path);
+            }
+        }
     }
 
-    // Rewrite the filename according to the order
+    // Rewrite the filename according to the timestamp
     let mut i: u64 = 0;
-    for (_timestamp, file_path) in &files_sorted_by_ts {
-        let new_file_name = format!("{}{}", i, EXTENSION_TO_SORT);
-        let mut new_file_path = file_path.clone();
-        new_file_path.set_file_name(new_file_name);
-        fs::rename(file_path, new_file_path)?;
-        i += 1;
+    for (_timestamp, files) in &files_sorted_by_ts {
+        // Iterate over all the file of a given timestamp (in no particular order)
+        for file_path in files {
+            let new_file_name = format!("{}{}", i, EXTENSION_TO_SORT);
+            let mut new_file_path = file_path.clone();
+            new_file_path.set_file_name(new_file_name);
+            fs::rename(file_path, new_file_path)?;
+            i += 1;
+        }
     }
     Ok(())
 }
