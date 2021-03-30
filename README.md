@@ -2,6 +2,8 @@
 
 This is mainly a pet project to learn rust, although it is applied on a real need.
 
+On the example applied, it took less than 2s to sort ~75k files.
+___
 Hierarchy of the files:
 
 ```
